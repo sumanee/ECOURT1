@@ -1,5 +1,11 @@
+const { validationResult } = require('express-validator');
 const dbAPls = require('../dbAPls/dao-buffCase');
 const printlog = require('../utils/printLog');
+const { getListJudge } = require('../controllers/ctl-buffJudge');
+const { getListParty } = require('../controllers/ctl-buffParty');
+const { getListPlantiff } = require('../controllers/ctl-buffPlantiff');
+const { getListLawyer } = require('../controllers/ctl-buffLawyer');
+const { getListWitness } = require('../controllers/ctl-buttWitness');
 
 let response;
 let poDataArray;
@@ -15,16 +21,10 @@ function setData(data) {
   };
 }
 
-const validateCase = async (req, res) => {
+const insterData = async res => {
   try {
-    if (!req.body) {
-      response = printlog.return_reqBody(__filename);
-      res.status(400).send({ response });
-    }
-
-    setData(req.body);
     const result = await dbAPls
-      .getCaseByCteId(poDataArray)
+      .insertCase(poDataArray)
       .then(data => {
         return data.recordset[0];
       })
@@ -41,10 +41,159 @@ const validateCase = async (req, res) => {
     });
   }
 };
-
-module.exports.updateCase = async (req, res) => {
+const updateData = async res => {
   try {
-    const _date = await validateCase(req, res);
+    const result = await dbAPls
+      .updateCase(poDataArray)
+      .then(async data => {
+        return data.rowsAffected;
+      })
+      .catch(err => {
+        return res.status(500).send({
+          response: printlog.return_error(__filename, err.toString())
+        });
+      });
+    return result;
+  } catch (err) {
+    return res.status(500).send({
+      response: printlog.return_error(__filename, err.toString())
+    });
+  }
+};
+const checkCase = async (req, res) => {
+  try {
+    setData(req.body);
+    const result = await dbAPls
+      .getCaseByCteId(poDataArray)
+      .then(async data => {
+        if (data.rowsAffected[0] > 0) {
+          await updateData(poDataArray, res);
+        } else {
+          await insterData(poDataArray, res);
+        }
+        return data.rowsAffected[0];
+      })
+      .catch(err => {
+        return res.status(500).send({
+          response: printlog.return_error(__filename, err.toString())
+        });
+      });
+
+    return result;
+  } catch (err) {
+    return res.status(500).send({
+      response: printlog.return_error(__filename, err.toString())
+    });
+  }
+};
+
+module.exports.validateBuff = async (req, res, next) => {
+  const errors = await validationResult(req);
+
+  if (!errors.isEmpty()) {
+    res.status(422).json({ errors: errors.array() });
+  } else {
+    await checkCase(req, res);
+    // res.end();
+    next();
+  }
+};
+
+module.exports.insertBuff = async (req, res, next) => {
+  try {
+    await insterData(req.body);
+    if (req.body.JUDGELIST) {
+      await buffJudge.insterDataJudge(req.body);
+    }
+    if (req.body.LAWYERLIST) {
+    }
+    if (req.body.PARTYLIST) {
+    }
+    if (req.body.PLAINTIFFLIST) {
+    }
+    if (req.body.WITNESSLIST) {
+    }
+    next();
+  } catch (err) {
+    // res.status(500).send({
+    //   response: printlog.return_error(__filename, err.toString())
+    // });
+  }
+};
+module.exports.getDataBuff = async (req, res) => {
+  try {
+    setData(req.body);
+    let _datarturn;
+    await dbAPls
+      .getCaseByCteId(poDataArray)
+      .then(async data => {
+        if (data.recordset && data.recordset.length > 0) {
+          response = printlog.return_success(__filename);
+          const _data = data.recordset[0];
+          _datarturn = _data;
+
+          const _dataJudge = await getListJudge(req, res);
+          if (_dataJudge) {
+            _datarturn.JUDGELIST = _dataJudge;
+          }
+
+          const _dataParty = await getListParty(req, res);
+          if (_dataParty) {
+            _datarturn.PARTYLIST = _dataParty;
+          }
+
+          const _dataPlantiff = await getListPlantiff(req, res);
+          if (_dataParty) {
+            _datarturn.PLAINTIFFLIST = _dataPlantiff;
+          }
+
+          const _dataLawyer = await getListLawyer(req, res);
+          const _dataLawyerPrt = [];
+          const _dataLawyerPlt = [];
+          if (_dataLawyer) {
+            _dataLawyer.map(element => {
+              if (element.LAWTYPID === 1) {
+                return _dataLawyerPrt.push(element);
+              }
+              if (element.LAWTYPID === 2) {
+                return _dataLawyerPlt.push(element);
+              }
+            });
+            if (_dataLawyerPrt) {
+              _datarturn.LAWYERPRTLIST = _dataLawyerPrt;
+            }
+            if (_dataLawyerPlt) {
+              _datarturn.LAWYERPLTLIST = _dataLawyerPlt;
+            }
+          }
+          const _dataWitness = await getListWitness(req, res);
+          if (_dataWitness) {
+            _datarturn.WITNESSLIST = _dataWitness;
+          }
+
+          response.returndata = _datarturn;
+          res.status(200);
+        } else {
+          response = printlog.return_waring(__filename);
+          response.returndata = `Can't data found`;
+          res.status(200);
+        }
+      })
+      .catch(err => {
+        response = printlog.return_error(__filename, err.toString());
+        res.status(500);
+      });
+    res.send({ response });
+  } catch (err) {
+    res.status(500).send({
+      response: printlog.return_error(__filename, err.toString())
+    });
+  }
+};
+
+module.exports.validateCaseBlack = async (req, res) => {
+  try {
+    const _date = await checkData(req, res);
     if (_date) {
       if (req.body.CTEID !== _date.CTEID) {
         response = printlog.return_waring(__filename);
@@ -52,8 +201,7 @@ module.exports.updateCase = async (req, res) => {
         response.returndata = _date;
         res.status(200);
       } else {
-        await dbAPls
-          .updateCase(poDataArray)
+        await updateData(poDataArray)
           .then(async data => {
             if (data.rowsAffected[0] === 1) {
               const _datareturn = data.recordset[0];
@@ -69,8 +217,7 @@ module.exports.updateCase = async (req, res) => {
           });
       }
     } else {
-      await dbAPls
-        .insertCase(poDataArray)
+      await insterData(poDataArray)
         .then(async data => {
           if (data.rowsAffected[0] === 1) {
             response = printlog.return_success(__filename);
@@ -95,100 +242,24 @@ module.exports.updateCase = async (req, res) => {
   }
 };
 
-module.exports.getCaseByCteId = async (req, res) => {
+const deleteData = async (req, res) => {
   try {
-    if (!req.body) {
-      response = printlog.return_reqBody(__filename);
-      res.status(400).send({ response });
-    }
-    setData(req.body);
-    await dbAPls
-      .getCaseByCteId(poDataArray)
-      .then(data => {
-        if (data.recordset && data.recordset.length > 0) {
-          response = printlog.return_success(__filename);
-          response.returndata = data.recordset;
-          res.status(200);
-        } else {
-          response = printlog.return_waring(__filename);
-          response.returndata = `Can't data found`;
-          res.status(200);
-        }
-      })
-      .catch(err => {
-        response = printlog.return_error(__filename, err.toString());
-        res.status(500);
-      });
-    res.send({ response });
-  } catch (err) {
-    res.status(500).send({
-      response: printlog.return_error(__filename, err.toString())
-    });
-  }
-};
-
-module.exports.getCaseAll = async (req, res) => {
-  try {
-    if (!req.body) {
-      response = printlog.return_reqBody(__filename);
-      res.status(400).send({ response });
-    }
-    setData(req.body);
-    await dbAPls
-      .getCaseAll(poDataArray)
-      .then(data => {
-        if (data.recordset && data.recordset.length > 0) {
-          response = printlog.return_success(__filename);
-          response.returndata = data.recordset;
-          res.status(200);
-        } else {
-          response = printlog.return_waring(__filename);
-          response.returndata = `Can't data found`;
-          res.status(200);
-        }
-      })
-      .catch(err => {
-        response = printlog.return_error(__filename, err.toString());
-        res.status(500);
-      });
-    res.send({ response });
-  } catch (err) {
-    res.status(500).send({
-      response: printlog.return_error(__filename, err.toString())
-    });
-  }
-};
-
-module.exports.deleteCase = async (req, res) => {
-  try {
-    if (!req.body) {
-      response = printlog.return_reqBody(__filename);
-      res.status(400).send({ response });
-    }
     setData(req.body);
 
-    await dbAPls
+    const result = await dbAPls
       .deleteCase(poDataArray)
-      .then(async data => {
-        if (data.rowsAffected[0] === 1) {
-          response = printlog.return_success(__filename);
-          response.message = `Delete data success`;
-          res.status(200);
-        } else {
-          response = printlog.return_waring(__filename);
-          response.message = `Can't delete data`;
-          res.status(200);
-        }
+      .then(data => {
+        return data;
       })
       .catch(err => {
-        res.status(500).send({
+        return res.status(500).send({
           response: printlog.return_error(__filename, err.toString())
         });
       });
 
-    res.send({ response });
+    return result;
   } catch (err) {
-    res.status(500).send({
+    return res.status(500).send({
       response: printlog.return_error(__filename, err.toString())
     });
   }

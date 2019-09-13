@@ -1,15 +1,16 @@
 const { forEachAsync } = require('forEachAsync');
-const dbAPls = require('../dbAPls/dao-buffJudge');
+const dbAPls = require('../dbAPls/dao-buffParty');
 const printlog = require('../utils/printLog');
 
 let response;
 let poDataArray;
 function setData(data) {
   poDataArray = {
-    // JUDNO, JUDFNME, JUDLNME, CTEID, CTEDTE
-    JUDNO: data.JUDNO ? data.JUDNO : 0,
-    JUDFNME: data.JUDFNME ? data.JUDFNME : null,
-    JUDLNME: data.JUDLNME ? data.JUDLNME : null,
+    // PRTNO, TITLEID, IDCARDNO, PRTFNME, PRTLNME, ADR_HUSNO, ADR_MOO, ADR_VILLAGE,
+    // ADR_ROAD, ADR_ALLEY, LOCID, POSTCODE, COJCTL, ADR_TMBNME, ADR_AMPNME, ADR_PRVNME, CTEID, CTEDTE
+    PRTNO: data.PRTNO ? data.PRTNO : 0,
+    PRTFNME: data.PRTFNME ? data.PRTFNME : null,
+    PRTLNME: data.PRTLNME ? data.PRTLNME : null,
     TITLEID: data.TITLEID ? data.TITLEID : null,
     CTEID: data.CTEID ? data.CTEID : 0
   };
@@ -20,7 +21,7 @@ const checkData = async (_data, res) => {
     setData(_data);
 
     const result = await dbAPls
-      .getJudgeByJudgeNo(poDataArray)
+      .getPartyByPartyNo(poDataArray)
       .then(data => {
         return data.recordset[0];
       })
@@ -37,12 +38,12 @@ const checkData = async (_data, res) => {
     });
   }
 };
-const updateDataJudge = async (_data, res) => {
+const updateDataParty = async (_data, res) => {
   try {
     setData(_data);
 
     const result = await dbAPls
-      .updateJudge(poDataArray)
+      .updateParty(poDataArray)
       .then(data => {
         return data.recordset[0];
       })
@@ -59,11 +60,11 @@ const updateDataJudge = async (_data, res) => {
     });
   }
 };
-const insterDataJudge = async (_data, res) => {
+const insterDataParty = async (_data, res) => {
   try {
     setData(_data);
     const result = await dbAPls
-      .insertJudge(poDataArray)
+      .insertParty(poDataArray)
       .then(data => {
         return data.recordset[0];
       })
@@ -80,11 +81,11 @@ const insterDataJudge = async (_data, res) => {
     });
   }
 };
-const deleteDataByNo = async (_data, res) => {
+const deletePartyByNo = async (_data, res) => {
   try {
     setData(_data);
     const result = await dbAPls
-      .deleteJudgeByNo(poDataArray)
+      .deletePartyByNo(poDataArray)
       .then(data => {
         return data;
       })
@@ -102,23 +103,23 @@ const deleteDataByNo = async (_data, res) => {
   }
 };
 
-module.exports.getListJudge = async (req, res) => {
+module.exports.getListParty = async (req, res) => {
   try {
     await setData(req.body);
     const result = await dbAPls
-      .getJudgeByCteId(poDataArray)
+      .getPartyByCteId(poDataArray)
       .then(data => {
         let _datarturn;
         if (data.recordset.length > 0) {
           _datarturn = data.recordset.map(_data => {
-            if (!_data.JUDFNME) _data.JUDFNME = '';
-            if (!_data.JUDLNME) _data.JUDLNME = '';
+            if (!_data.PRTFNME) _data.PRTFNME = '';
+            if (!_data.PRTLNME) _data.PRTLNME = '';
             if (!_data.TITLEID) _data.TITLEID = 0;
             return _data;
           });
         }
-        req.dataJudge = _datarturn;
-        return req.dataJudge;
+        req.dataParty = _datarturn;
+        return req.dataParty;
       })
       .catch(err => {
         response = printlog.return_error(__filename, err.toString());
@@ -132,27 +133,29 @@ module.exports.getListJudge = async (req, res) => {
   }
 };
 
-module.exports.validateJudge = async (req, res, next) => {
-  if (req.body.JUDGELIST && req.body.JUDGELIST.length > 0) {
+module.exports.validateParty = async (req, res, next) => {
+  if (req.body.PARTYLIST) {
     let _return = '';
     let _datereturn = '';
-    await forEachAsync(req.body.JUDGELIST, async element => {
+    await forEachAsync(req.body.PARTYLIST, async element => {
       if (element.STATUS && element.STATUS === 'D') {
-        await deleteDataByNo(element, res);
+        await deletePartyByNo(element, res);
       } else {
         _datereturn = await checkData(element, res)
           .then(async data => {
             if (data) {
-              _return = await updateDataJudge(element, res);
+              _return = await updateDataParty(element, res);
               return _return;
             }
-            _return = await insterDataJudge(element, res);
+            _return = await insterDataParty(element, res);
             return _return;
           })
           .catch(err => {});
       }
+      // nextArray();
     });
   }
+  console.log('a');
 
   next();
 };

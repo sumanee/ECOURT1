@@ -1,65 +1,66 @@
 const mssql = require('mssql');
 const dbAPIS = require('../services/database');
 const { writeLog } = require('../utils/printLog');
-// LAWNO, LAWTYPID, LAWFNME, LAWLNME, TITLEID, CTEID, CTEDTE
-const BuffLawyer = {
-  SELECT: {
-    ALL: `SELECT LAWNO, LAWTYPID, LAWFNME, LAWLNME, TITLEID, CTEID,
-      FORMAT(CTEDTE, 'dd-MM-yyyy hh:mm:ss')  AS CTEDTE FROM BUFF_LAWYER `,
-    COUNTMAX: `SELECT ISNULL(MAX(LAWNO),0)+1 AS LAWNO FROM BUFF_LAWYER WHERE CTEID = @CTEID`
-  },
-  UPDATE: `UPDATE BUFF_LAWYER SET LAWTYPID = @LAWTYPID , LAWFNME = @LAWFNME  
-  , LAWLNME = @LAWLNME , TITLEID = @TITLEID 
-  OUTPUT INSERTED.LAWNO, INSERTED.LAWTYPID, 
-  INSERTED.LAWFNME, INSERTED.LAWLNME, INSERTED.TITLEID 
-  WHERE CTEID = @CTEID AND LAWNO = @LAWNO `,
 
-  INSERT: `INSERT INTO BUFF_LAWYER 
-  ( LAWNO, LAWTYPID, LAWFNME, LAWLNME, TITLEID, CTEID , CTEDTE  )
-  OUTPUT   INSERTED.LAWNO,  INSERTED.LAWTYPID, 
-  INSERTED.LAWFNME, INSERTED.LAWLNME, INSERTED.TITLEID 
-  VALUES (@LAWNO , @LAWTYPID, @LAWFNME, @LAWLNME, @TITLEID, @CTEID, GETDATE() ) `,
-  DELETE: `DELETE FROM BUFF_LAWYER`
+// PRTNO, TITLEID, IDCARDNO, PRTFNME, PRTLNME, ADR_HUSNO, ADR_MOO, ADR_VILLAGE,
+// ADR_ROAD, ADR_ALLEY, LOCID, POSTCODE, COJCTL, ADR_TMBNME, ADR_AMPNME, ADR_PRVNME, CTEID, CTEDTE
+
+const BuffParty = {
+  SELECT: {
+    ALL: `SELECT PRTNO, PRTFNME, PRTLNME, TITLEID,
+      CTEID, FORMAT(CTEDTE, 'dd-MM-yyyy hh:mm:ss') AS CTEDTE FROM BUFF_PARTY`,
+    COUNTMAX: `SELECT ISNULL(MAX(PRTNO),0)+1 AS PRTNO FROM BUFF_PARTY WHERE CTEID = @CTEID `
+  },
+
+  INSERT: `INSERT INTO BUFF_PARTY
+   (PRTNO, PRTFNME, PRTLNME, TITLEID, CTEID, CTEDTE)
+   OUTPUT INSERTED.PRTNO, INSERTED.CTEID
+   VALUES(@PRTNO, @PRTFNME, @PRTLNME, @TITLEID,@CTEID, GETDATE())`,
+
+  UPDATE: `UPDATE BUFF_PARTY
+    SET PRTFNME = @PRTFNME, PRTLNME = @PRTLNME, TITLEID = @TITLEID,
+    CTEID = @CTEID , CTEDTE = GETDATE() 
+    OUTPUT INSERTED.PRTNO, INSERTED.CTEID
+    WHERE CTEID = @CTEID  AND PRTNO = @PRTNO `,
+
+  DELETE: `DELETE BUFF_PARTY `
 };
+
 let binds;
 function setData(data) {
   binds = [
-    { name: 'LAWNO', sqltype: mssql.Numeric, value: data.LAWNO },
-    { name: 'LAWTYPID', sqltype: mssql.Numeric, value: data.LAWTYPID },
-    { name: 'LAWFNME', sqltype: mssql.NVarChar, value: data.LAWFNME },
-    { name: 'LAWLNME', sqltype: mssql.NVarChar, value: data.LAWLNME },
+    { name: 'PRTNO', sqltype: mssql.Numeric, value: data.PRTNO },
+    { name: 'PRTFNME', sqltype: mssql.NVarChar, value: data.PRTFNME },
+    { name: 'PRTLNME', sqltype: mssql.NVarChar, value: data.PRTLNME },
     { name: 'TITLEID', sqltype: mssql.Numeric, value: data.TITLEID },
-    { name: 'CTEID', sqltype: mssql.NVarChar, value: data.CTEID }
+    { name: 'CTEID', sqltype: mssql.Numeric, value: data.CTEID }
   ];
 }
 
-const contMaxLawyerNo = async poDataArray => {
+const contMaxPartyNo = async poDataArray => {
   try {
-    await setData(poDataArray);
-
-    const sql = `${BuffLawyer.SELECT.COUNTMAX}`;
+    setData(poDataArray);
+    const sql = `${BuffParty.SELECT.COUNTMAX}`;
     const result = await dbAPIS
       .simpleExecute(sql, binds)
       .then(data => {
         if (data.recordset[0]) {
-          return data.recordset[0].LAWNO;
+          return data.recordset[0].PRTNO;
         }
         return 0;
       })
       .catch(err => {
         return writeLog(__filename, err.toString());
       });
-
     return result;
   } catch (err) {
     return writeLog(__filename, err.toString());
   }
 };
-
-module.exports.getLawByCteId = async poDataArray => {
+module.exports.getPartyByCteId = async poDataArray => {
   try {
     await setData(poDataArray);
-    const sql = `${BuffLawyer.SELECT.ALL} WHERE CTEID = @CTEID   ORDER BY LAWTYPID, LAWNO `;
+    const sql = `${BuffParty.SELECT.ALL} WHERE CTEID = @CTEID  `;
 
     const result = await dbAPIS
       .simpleExecute(sql, binds)
@@ -74,10 +75,10 @@ module.exports.getLawByCteId = async poDataArray => {
     return writeLog(__filename, err.toString());
   }
 };
-module.exports.getLawByLawNo = async poDataArray => {
+module.exports.getPartyByPartyNo = async poDataArray => {
   try {
     await setData(poDataArray);
-    const sql = `${BuffLawyer.SELECT.ALL} WHERE CTEID = @CTEID AND LAWNO = @LAWNO `;
+    const sql = `${BuffParty.SELECT.ALL} WHERE CTEID = @CTEID AND PRTNO = @PRTNO `;
 
     const result = await dbAPIS
       .simpleExecute(sql, binds)
@@ -93,13 +94,33 @@ module.exports.getLawByLawNo = async poDataArray => {
   }
 };
 
-module.exports.insertLawyer = async poDataArray => {
+module.exports.insertParty = async poDataArray => {
   try {
-    const _newlawno = await contMaxLawyerNo(poDataArray);
+    const _newPRTNO = await contMaxPartyNo(poDataArray);
 
-    binds[0] = { name: 'LAWNO', sqltype: mssql.Numeric, value: _newlawno };
+    binds[0] = { name: 'PRTNO', sqltype: mssql.Numeric, value: _newPRTNO };
 
-    const sql = `${BuffLawyer.INSERT}`;
+    const sql = `${BuffParty.INSERT}`;
+    const result = await dbAPIS
+      .simpleExecute(sql, binds)
+      .then(data => {
+        return data;
+      })
+      .catch(err => {
+        return writeLog(__filename, err.toString());
+      });
+
+    return result;
+  } catch (err) {
+    return writeLog(__filename, err.toString());
+  }
+};
+
+module.exports.updateParty = async poDataArray => {
+  try {
+    await setData(poDataArray);
+
+    const sql = `${BuffParty.UPDATE}`;
     const result = await dbAPIS
       .simpleExecute(sql, binds)
       .then(data => {
@@ -114,31 +135,10 @@ module.exports.insertLawyer = async poDataArray => {
   }
 };
 
-module.exports.updateLawyer = async poDataArray => {
+module.exports.deletePartyByNo = async poDataArray => {
   try {
-    await setData(poDataArray);
-
-    const sql = `${BuffLawyer.UPDATE}`;
-    const result = await dbAPIS
-      .simpleExecute(sql, binds)
-      .then(data => {
-        console.log('data', data);
-
-        return data;
-      })
-      .catch(err => {
-        return writeLog(__filename, err.toString());
-      });
-    return result;
-  } catch (err) {
-    return writeLog(__filename, err.toString());
-  }
-};
-
-module.exports.deleteLawyerByNo = async poDataArray => {
-  try {
-    await setData(poDataArray);
-    const sql = `${BuffLawyer.DELETE} WHERE LAWNO = @LAWNO AND CTEID = @CTEID`;
+    setData(poDataArray);
+    const sql = `${BuffParty.DELETE} WHERE PRTNO = @PRTNO AND CTEID = @CTEID`;
     const result = await dbAPIS
       .simpleExecute(sql, binds)
       .then(data => {
@@ -153,12 +153,10 @@ module.exports.deleteLawyerByNo = async poDataArray => {
   }
 };
 
-module.exports.deleteLawyerByCteId = async poDataArray => {
+module.exports.deletePartyByCteId = async poDataArray => {
   try {
-    await setData(poDataArray);
-
-    const sql = `${BuffLawyer.DELETE} WHERE CTEID = @CTEID`;
-
+    setData(poDataArray);
+    const sql = `${BuffParty.DELETE} WHERE CTEID = @CTEID`;
     const result = await dbAPIS
       .simpleExecute(sql, binds)
       .then(data => {

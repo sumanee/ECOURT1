@@ -1,37 +1,36 @@
 const express = require('express');
 
 const router = new express.Router();
-const {
-  getCaseAll,
-  getCaseByCteId,
-  updateCase,
-  deleteCase
-} = require('../controllers/ctl-buffCase');
 
-const {
-  updateJudge,
-  getJudgeByCaseId,
-  deleteJudgeById
-} = require('../controllers/ctl-buffJudge');
+const { validate } = require('../utils/valiData');
 
-const {
-  updateLawyer,
-  getLawyerByCaseId,
-  deleteLawyerById
-} = require('../controllers/ctl-buffLawyer');
+const { validateBuff, getDataBuff } = require('../controllers/ctl-buffCase');
 
-router.post('/getCaseAll', getCaseAll);
+const { validateJudge } = require('../controllers/ctl-buffJudge');
+const { validateParty } = require('../controllers/ctl-buffParty');
+const { validatePlantiff } = require('../controllers/ctl-buffPlantiff');
+const { validateLawyer } = require('../controllers/ctl-buffLawyer');
+const { validateWitness } = require('../controllers/ctl-buttWitness');
 
-router.post('/getCaseByCteId', getCaseByCteId);
-router.post('/updateCase', updateCase);
-router.post('/deleteCase', deleteCase);
+// router.post(
+//   '/updateCase',
+//   validate('createCaseBuff'),
+//   validateBuff,
+//   validateJudge,
+//   validateParty,
+//   validatePlantiff,
+//   validateLawyer,
+//   getDataBuff
+// );
 
-router.post('/updateJudge', updateJudge);
-router.post('/getJudgeByCaseId', getJudgeByCaseId);
-router.post('/deleteJudgeById', deleteJudgeById);
-
-router.post('/updateLawyer', updateLawyer);
-router.post('/getLawyerByCaseId', getLawyerByCaseId);
-router.post('/deleteLawyerById', deleteLawyerById);
-
+router.post(
+  '/updateCase',
+  validateBuff,
+  // validateJudge,
+  // validateParty,
+  // validatePlantiff,
+  // validateWitness,
+  // validateLawyer,
+  getDataBuff
+);
 module.exports = router;

@@ -1,16 +1,37 @@
 const { forEachAsync } = require('forEachAsync');
-const dbAPls = require('../dbAPls/dao-buffJudge');
+const dbAPls = require('../dbAPls/dao-buffWitness');
 const printlog = require('../utils/printLog');
+
+//  WITNO, WITTYP, IDCARDNO, TITLEID, WITFNME, WITLNME, RELATION, OCCUPATION, BIRTHDAY, AGE,
+//  NATIONALITY, RACE, ADR_HUSNO, ADR_MOO, ADR_VILLAGE, ADR_ROAD, ADR_ALLEY, ADDRESS, LOCID,
+//  POSTCODE, CTEID, CTEDTE 22
 
 let response;
 let poDataArray;
 function setData(data) {
   poDataArray = {
-    // JUDNO, JUDFNME, JUDLNME, CTEID, CTEDTE
-    JUDNO: data.JUDNO ? data.JUDNO : 0,
-    JUDFNME: data.JUDFNME ? data.JUDFNME : null,
-    JUDLNME: data.JUDLNME ? data.JUDLNME : null,
+    WITNO: data.WITNO ? data.WITNO : 0,
+    WITTYP: data.WITTYP ? data.WITTYP : 0,
+    IDCARDNO: data.IDCARDNO ? data.IDCARDNO : null,
     TITLEID: data.TITLEID ? data.TITLEID : null,
+    WITFNME: data.WITFNME ? data.WITFNME : null,
+    WITLNME: data.WITLNME ? data.WITLNME : null,
+
+    RELATION: data.RELATION ? data.RELATION : null,
+    OCCUPATION: data.OCCUPATION ? data.OCCUPATION : null,
+    BIRTHDAY: data.BIRTHDAY ? data.BIRTHDAY : null,
+    AGE: data.AGE ? data.AGE : null,
+    NATIONALITY: data.NATIONALITY ? data.NATIONALITY : null,
+    RACE: data.RACE ? data.RACE : null,
+    ADR_HUSNO: data.ADR_HUSNO ? data.ADR_HUSNO : null,
+    ADR_MOO: data.ADR_MOO ? data.ADR_MOO : null,
+    ADR_VILLAGE: data.ADR_VILLAGE ? data.ADR_VILLAGE : null,
+
+    ADR_ROAD: data.ADR_ROAD ? data.ADR_ROAD : null,
+    ADR_ALLEY: data.ADR_ALLEY ? data.ADR_ALLEY : null,
+    ADDRESS: data.ADDRESS ? data.ADDRESS : null,
+    LOCID: data.LOCID ? data.LOCID : null,
+    POSTCODE: data.POSTCODE ? data.POSTCODE : null,
     CTEID: data.CTEID ? data.CTEID : 0
   };
 }
@@ -20,7 +41,7 @@ const checkData = async (_data, res) => {
     setData(_data);
 
     const result = await dbAPls
-      .getJudgeByJudgeNo(poDataArray)
+      .getWitnessByWitnessNo(poDataArray)
       .then(data => {
         return data.recordset[0];
       })
@@ -37,12 +58,12 @@ const checkData = async (_data, res) => {
     });
   }
 };
-const updateDataJudge = async (_data, res) => {
+const updateDataWitness = async (_data, res) => {
   try {
     setData(_data);
 
     const result = await dbAPls
-      .updateJudge(poDataArray)
+      .updateWitness(poDataArray)
       .then(data => {
         return data.recordset[0];
       })
@@ -59,11 +80,11 @@ const updateDataJudge = async (_data, res) => {
     });
   }
 };
-const insterDataJudge = async (_data, res) => {
+const insterDataWitness = async (_data, res) => {
   try {
     setData(_data);
     const result = await dbAPls
-      .insertJudge(poDataArray)
+      .insertWitness(poDataArray)
       .then(data => {
         return data.recordset[0];
       })
@@ -84,7 +105,7 @@ const deleteDataByNo = async (_data, res) => {
   try {
     setData(_data);
     const result = await dbAPls
-      .deleteJudgeByNo(poDataArray)
+      .deleteWitnessByNo(poDataArray)
       .then(data => {
         return data;
       })
@@ -102,23 +123,23 @@ const deleteDataByNo = async (_data, res) => {
   }
 };
 
-module.exports.getListJudge = async (req, res) => {
+module.exports.getListWitness = async (req, res) => {
   try {
     await setData(req.body);
     const result = await dbAPls
-      .getJudgeByCteId(poDataArray)
+      .getWitnessByCteId(poDataArray)
       .then(data => {
         let _datarturn;
         if (data.recordset.length > 0) {
           _datarturn = data.recordset.map(_data => {
-            if (!_data.JUDFNME) _data.JUDFNME = '';
-            if (!_data.JUDLNME) _data.JUDLNME = '';
+            if (!_data.WITFNME) _data.WITFNME = '';
+            if (!_data.WITLNME) _data.WITLNME = '';
             if (!_data.TITLEID) _data.TITLEID = 0;
             return _data;
           });
         }
-        req.dataJudge = _datarturn;
-        return req.dataJudge;
+        req.dataWitness = _datarturn;
+        return req.dataWitness;
       })
       .catch(err => {
         response = printlog.return_error(__filename, err.toString());
@@ -132,21 +153,21 @@ module.exports.getListJudge = async (req, res) => {
   }
 };
 
-module.exports.validateJudge = async (req, res, next) => {
-  if (req.body.JUDGELIST && req.body.JUDGELIST.length > 0) {
+module.exports.validateWitness = async (req, res, next) => {
+  if (req.body.WITNESSLIST && req.body.WITNESSLIST.length > 0) {
     let _return = '';
     let _datereturn = '';
-    await forEachAsync(req.body.JUDGELIST, async element => {
+    await forEachAsync(req.body.WITNESSLIST, async element => {
       if (element.STATUS && element.STATUS === 'D') {
         await deleteDataByNo(element, res);
       } else {
         _datereturn = await checkData(element, res)
           .then(async data => {
             if (data) {
-              _return = await updateDataJudge(element, res);
+              _return = await updateDataWitness(element, res);
               return _return;
             }
-            _return = await insterDataJudge(element, res);
+            _return = await insterDataWitness(element, res);
             return _return;
           })
           .catch(err => {});
